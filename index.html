@@ -11,12 +11,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
 <style>
 :root{
-  --bg:oklch(0.19 0.028 254); --fg:oklch(0.96 0.006 250); 
+  --bg:oklch(0.19 0.028 254); --fg:oklch(0.96 0.006 250);
   --card:oklch(0.235 0.03 254); --muted-fg:oklch(0.72 0.024 252);
   --primary:oklch(0.76 0.12 184); --accent:oklch(0.8 0.14 78);
   --destructive:oklch(0.64 0.2 22); --success:oklch(0.72 0.15 156);
   --warning:oklch(0.82 0.15 84); --secondary:oklch(0.29 0.03 254);
-  --border:oklch(0.96 0.006 250); --radius:0.75rem; 
+  --border:oklch(1 0 0 / 10%); --radius:0.75rem;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -46,8 +46,8 @@ h1{font-size:28px;font-weight:600;margin-top:8px}
 .card .hint{margin-top:4px;font-size:12px;color:var(--muted-fg)}
 .t-primary{color:var(--primary)}.t-accent{color:var(--accent)}.t-dest{color:var(--destructive)}.t-succ{color:var(--success)}
 .filters{margin-top:24px;padding:16px;display:grid;gap:12px}
-@media(min-width:768px){.filters{grid-template-columns:repeat(3,1fr)}}
-@media(min-width:1200px){.filters{grid-template-columns:2fr repeat(4,1fr) auto}}
+@media(min-width:768px){.filters{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:1200px){.filters{grid-template-columns:1.5fr repeat(6,1fr) auto}}
 input,select,button{font:inherit;color:inherit}
 input,select{width:100%;background:oklch(1 0 0 / 6%);border:1px solid oklch(1 0 0 / 14%);
   border-radius:var(--radius);padding:10px 12px;font-size:14px}
@@ -168,6 +168,8 @@ tr.pago td{opacity:.55}
 
   <section class="panel filters">
     <input id="busca" type="search" placeholder="Buscar por histórico, fornecedor, centro..." />
+    <input id="dataInicio" type="date" title="Data Inicial" />
+    <input id="dataFim" type="date" title="Data Final" />
     <select id="empresa"></select>
     <select id="centro"></select>
     <select id="fornecedor"></select>
@@ -217,7 +219,7 @@ const CONTAS = [{"id":"1","vencimento":"2026-03-12","codFornecedor":"000172","fo
 const ALL = "__all__";
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 const KEY = "contas-pagas-v1";
-const state = { busca:"", empresa:ALL, centro:ALL, fornecedor:ALL, situacao:ALL, mes:null, pagos:new Set() };
+const state = { busca:"", empresa:ALL, centro:ALL, fornecedor:ALL, situacao:ALL, mes:null, dataInicio:"", dataFim:"", pagos:new Set() };
 try { const raw = localStorage.getItem(KEY); if (raw) state.pagos = new Set(JSON.parse(raw).filter(v=>typeof v==="string")); } catch {}
 const savePagos = () => { try { localStorage.setItem(KEY, JSON.stringify([...state.pagos])); } catch {} };
 const brl = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2});
@@ -249,6 +251,8 @@ function filtrar(){
     if (state.centro !== ALL && c.centroCusto !== state.centro) return false;
     if (state.fornecedor !== ALL && c.fornecedor !== state.fornecedor) return false;
     if (state.mes && mesKey(c.vencimento) !== state.mes) return false;
+    if (state.dataInicio && c.vencimento < state.dataInicio) return false;
+    if (state.dataFim && c.vencimento > state.dataFim) return false;
     if (state.situacao !== ALL){
       const pago = state.pagos.has(c.id), d = dias(c.vencimento);
       if (state.situacao === "pago" && !pago) return false;
@@ -339,11 +343,13 @@ fillSelect("centro", [...new Set(CONTAS.map(c=>c.centroCusto))].sort(), "Todos o
 fillSelect("fornecedor", [...new Set(CONTAS.map(c=>c.fornecedor))].sort(), "Todos os fornecedores");
 
 document.getElementById("busca").addEventListener("input", e=>{state.busca=e.target.value;render();});
-for (const k of ["empresa","centro","fornecedor","situacao"])
+for (const k of ["empresa","centro","fornecedor","situacao","dataInicio","dataFim"])
   document.getElementById(k).addEventListener("change", e=>{state[k]=e.target.value;render();});
 document.getElementById("limpar").addEventListener("click", ()=>{
-  Object.assign(state,{busca:"",empresa:ALL,centro:ALL,fornecedor:ALL,situacao:ALL,mes:null});
+  Object.assign(state,{busca:"",empresa:ALL,centro:ALL,fornecedor:ALL,situacao:ALL,mes:null,dataInicio:"",dataFim:""});
   document.getElementById("busca").value="";
+  document.getElementById("dataInicio").value="";
+  document.getElementById("dataFim").value="";
   for (const k of ["empresa","centro","fornecedor","situacao"]) document.getElementById(k).value=ALL;
   render();
 });
